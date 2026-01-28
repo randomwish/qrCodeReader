@@ -1,5 +1,5 @@
-# Deploy to Surge.sh
-name: Deploy to Surge
+# Deploy to Cloudflare Pages
+name: Deploy to Cloudflare Pages
 
 on:
   push:
@@ -9,18 +9,17 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    name: Deploy to Surge.sh
+    permissions:
+      contents: read
+      deployments: write
+    name: Deploy to Cloudflare Pages
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
         with:
-          node-version: '20'
-
-      - name: Install Surge
-        run: npm install -g surge
-
-      - name: Deploy to Surge
-        run: surge . ${{ vars.SURGE_DOMAIN || 'qr-code-reader.surge.sh' }} --token ${{ secrets.SURGE_TOKEN }}
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy . --project-name=qr-code-reader
