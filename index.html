@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Link Reader</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            color: white;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .subtitle {
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .drop-zone {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 60px 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+            transform: scale(1.02);
+        }
+
+        .drop-zone-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .drop-zone-text {
+            color: #555;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+        }
+
+        .drop-zone-hint {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .preview-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .preview-section.show {
+            display: block;
+        }
+
+        .preview-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .preview-image {
+            max-width: 120px;
+            max-height: 120px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .preview-info {
+            flex: 1;
+        }
+
+        .preview-filename {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .preview-status {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .result-section {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            background: #f8f9ff;
+        }
+
+        .result-section.success {
+            background: #e8f5e9;
+            border: 1px solid #a5d6a7;
+        }
+
+        .result-section.error {
+            background: #ffebee;
+            border: 1px solid #ef9a9a;
+        }
+
+        .result-label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .result-link {
+            display: block;
+            word-break: break-all;
+            color: #667eea;
+            font-size: 1.1rem;
+            text-decoration: none;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            border: 1px solid #e0e0e0;
+        }
+
+        .result-link:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .result-text {
+            word-break: break-all;
+            color: #333;
+            font-size: 1.1rem;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .error-message {
+            color: #c62828;
+            font-size: 1rem;
+        }
+
+        .copy-btn {
+            margin-top: 15px;
+            padding: 12px 25px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            background: #5a6fd6;
+            transform: translateY(-2px);
+        }
+
+        .copy-btn.copied {
+            background: #4caf50;
+        }
+
+        .history-section {
+            margin-top: 40px;
+            display: none;
+        }
+
+        .history-section.show {
+            display: block;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .history-title {
+            font-size: 1.1rem;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .clear-history {
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .clear-history:hover {
+            color: #c62828;
+        }
+
+        .history-list {
+            list-style: none;
+        }
+
+        .history-item {
+            padding: 12px 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .history-link {
+            color: #667eea;
+            text-decoration: none;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .history-link:hover {
+            text-decoration: underline;
+        }
+
+        .history-time {
+            color: #888;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+
+        canvas {
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .container {
+                padding: 25px;
+            }
+            
+            .drop-zone {
+                padding: 40px 20px;
+            }
+            
+            .drop-zone-icon {
+                font-size: 3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>QR Code Link Reader</h1>
+    <p class="subtitle">Upload a QR code image to extract the link</p>
+
+    <div class="container">
+        <div class="drop-zone" id="dropZone">
+            <div class="drop-zone-icon">📷</div>
+            <p class="drop-zone-text">Drop QR code image here</p>
+            <p class="drop-zone-hint">or click to select a file</p>
+        </div>
+        <input type="file" id="fileInput" accept="image/*">
+
+        <div class="preview-section" id="previewSection">
+            <div class="preview-header">
+                <img id="previewImage" class="preview-image" src="" alt="QR Preview">
+                <div class="preview-info">
+                    <p class="preview-filename" id="previewFilename"></p>
+                    <p class="preview-status" id="previewStatus">Scanning...</p>
+                </div>
+            </div>
+
+            <div class="result-section" id="resultSection">
+                <p class="result-label">Extracted Content</p>
+                <div id="resultContent"></div>
+                <button class="copy-btn" id="copyBtn" style="display: none;">Copy to Clipboard</button>
+            </div>
+        </div>
+
+        <div class="history-section" id="historySection">
+            <div class="history-header">
+                <span class="history-title">Recent Scans</span>
+                <button class="clear-history" id="clearHistory">Clear</button>
+            </div>
+            <ul class="history-list" id="historyList"></ul>
+        </div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <!-- jsQR library for QR code decoding -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const previewSection = document.getElementById('previewSection');
+        const previewImage = document.getElementById('previewImage');
+        const previewFilename = document.getElementById('previewFilename');
+        const previewStatus = document.getElementById('previewStatus');
+        const resultSection = document.getElementById('resultSection');
+        const resultContent = document.getElementById('resultContent');
+        const copyBtn = document.getElementById('copyBtn');
+        const historySection = document.getElementById('historySection');
+        const historyList = document.getElementById('historyList');
+        const clearHistory = document.getElementById('clearHistory');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let currentResult = '';
+        let history = JSON.parse(localStorage.getItem('qrHistory') || '[]');
+
+        // Initialize
+        renderHistory();
+
+        // Event Listeners
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(currentResult).then(() => {
+                copyBtn.textContent = 'Copied!';
+                copyBtn.classList.add('copied');
+                setTimeout(() => {
+                    copyBtn.textContent = 'Copy to Clipboard';
+                    copyBtn.classList.remove('copied');
+                }, 2000);
+            });
+        });
+
+        clearHistory.addEventListener('click', () => {
+            history = [];
+            localStorage.setItem('qrHistory', '[]');
+            renderHistory();
+        });
+
+        // Handle file upload
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showError('Please upload an image file');
+                return;
+            }
+
+            previewFilename.textContent = file.name;
+            previewStatus.textContent = 'Scanning...';
+            previewSection.classList.add('show');
+            resultSection.className = 'result-section';
+            resultContent.innerHTML = '';
+            copyBtn.style.display = 'none';
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                decodeQR(e.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Decode QR code from image
+        function decodeQR(imageSrc) {
+            const img = new Image();
+            img.onload = () => {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+                
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+                if (code) {
+                    showResult(code.data);
+                } else {
+                    showError('No QR code found in the image. Try a clearer image.');
+                }
+            };
+            img.onerror = () => {
+                showError('Failed to load image');
+            };
+            img.src = imageSrc;
+        }
+
+        // Show successful result
+        function showResult(data) {
+            currentResult = data;
+            previewStatus.textContent = 'QR code detected!';
+            resultSection.classList.add('success');
+            resultSection.classList.remove('error');
+
+            // Check if it's a URL
+            const isUrl = /^(https?:\/\/|www\.)/i.test(data);
+            
+            if (isUrl) {
+                const url = data.startsWith('http') ? data : 'https://' + data;
+                resultContent.innerHTML = `<a href="${url}" target="_blank" rel="noopener noreferrer" class="result-link">${data}</a>`;
+            } else {
+                resultContent.innerHTML = `<div class="result-text">${escapeHtml(data)}</div>`;
+            }
+
+            copyBtn.style.display = 'inline-block';
+
+            // Add to history
+            addToHistory(data);
+        }
+
+        // Show error
+        function showError(message) {
+            previewStatus.textContent = 'Scan failed';
+            resultSection.classList.add('error');
+            resultSection.classList.remove('success');
+            resultContent.innerHTML = `<p class="error-message">${message}</p>`;
+            copyBtn.style.display = 'none';
+        }
+
+        // Add to history
+        function addToHistory(data) {
+            // Remove duplicate if exists
+            history = history.filter(item => item.data !== data);
+            
+            // Add to beginning
+            history.unshift({
+                data: data,
+                time: new Date().toISOString()
+            });
+
+            // Keep only last 10 items
+            history = history.slice(0, 10);
+
+            localStorage.setItem('qrHistory', JSON.stringify(history));
+            renderHistory();
+        }
+
+        // Render history
+        function renderHistory() {
+            if (history.length === 0) {
+                historySection.classList.remove('show');
+                return;
+            }
+
+            historySection.classList.add('show');
+            historyList.innerHTML = history.map(item => {
+                const isUrl = /^(https?:\/\/|www\.)/i.test(item.data);
+                const url = item.data.startsWith('http') ? item.data : 'https://' + item.data;
+                const timeAgo = getTimeAgo(new Date(item.time));
+                
+                if (isUrl) {
+                    return `
+                        <li class="history-item">
+                            <a href="${url}" target="_blank" rel="noopener noreferrer" class="history-link">${escapeHtml(item.data)}</a>
+                            <span class="history-time">${timeAgo}</span>
+                        </li>
+                    `;
+                } else {
+                    return `
+                        <li class="history-item">
+                            <span class="history-link" style="color: #333; cursor: default;">${escapeHtml(item.data)}</span>
+                            <span class="history-time">${timeAgo}</span>
+                        </li>
+                    `;
+                }
+            }).join('');
+        }
+
+        // Helper: Get time ago string
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            
+            if (seconds < 60) return 'Just now';
+            if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
+            if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
+            return Math.floor(seconds / 86400) + 'd ago';
+        }
+
+        // Helper: Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Handle paste from clipboard
+        document.addEventListener('paste', (e) => {
+            const items = e.clipboardData.items;
+            for (let item of items) {
+                if (item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    handleFile(file);
+                    break;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
